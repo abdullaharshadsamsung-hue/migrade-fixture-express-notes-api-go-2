@@ -1,6 +1,6 @@
 // Package api contains the HTTP handlers migrated from the source
-// Express application (index.js). All routes are registered on a
-// chi.Router via RegisterRoutes, which is called from cmd/server.
+// Express application (index.js). All routes are registered on an
+// *http.ServeMux via RegisterRoutes, which is called from cmd/server.
 package api
 
 import (
@@ -9,11 +9,8 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 
-	"github.com/go-chi/chi/v5"
-
-	"migrated-app/internal/notes"
+	"express-notes-api/internal/notes"
 )
 
 // API holds the dependencies needed by the note handlers.
@@ -26,7 +23,7 @@ func New(store *notes.Store) *API {
 	return &API{store: store}
 }
 
-// RegisterRoutes registers every route this package owns on r:
+// RegisterRoutes registers every route this package owns on mux:
 //
 //	GET    /health       -> health check, {"status":"ok"}
 //	GET    /notes        -> list all notes
@@ -36,16 +33,16 @@ func New(store *notes.Store) *API {
 //	DELETE /notes/{id}   -> remove a note
 //
 // The source's Express global express.json() body-parsing middleware is
-// reproduced per-handler by decodeJSON, since Go's net/http has no
-// implicit body parsing.
-func RegisterRoutes(r chi.Router) {
+// reproduced per-handler by decodeJSON, since net/http has no implicit
+// body parsing.
+func RegisterRoutes(mux *http.ServeMux) {
 	a := New(notes.NewStore())
-	r.Get("/health", a.handleHealth)
-	r.Get("/notes", a.handleList)
-	r.Post("/notes", a.handleCreate)
-	r.Get("/notes/{id}", a.handleGet)
-	r.Put("/notes/{id}", a.handleUpdate)
-	r.Delete("/notes/{id}", a.handleRemove)
+	mux.HandleFunc("GET /health", a.handleHealth)
+	mux.HandleFunc("GET /notes", a.handleList)
+	mux.HandleFunc("POST /notes", a.handleCreate)
+	mux.HandleFunc("GET /notes/{id}", a.handleGet)
+	mux.HandleFunc("PUT /notes/{id}", a.handleUpdate)
+	mux.HandleFunc("DELETE /notes/{id}", a.handleRemove)
 }
 
 // writeJSON writes v as a JSON response with the given status code.
@@ -98,7 +95,7 @@ func (a *API) handleList(w http.ResponseWriter, _ *http.Request) {
 
 // handleGet handles GET /notes/{id}.
 func (a *API) handleGet(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(chi.URLParam(r, "id"))
+	id, ok := parseID(r.PathValue("id"))
 	if !ok {
 		writeError(w, http.StatusNotFound, "not found")
 		return
@@ -157,7 +154,7 @@ func (a *API) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "title must be a non-empty string")
 		return
 	}
-	id, ok := parseID(chi.URLParam(r, "id"))
+	id, ok := parseID(r.PathValue("id"))
 	if !ok {
 		writeError(w, http.StatusNotFound, "not found")
 		return
@@ -172,7 +169,7 @@ func (a *API) handleUpdate(w http.ResponseWriter, r *http.Request) {
 
 // handleRemove handles DELETE /notes/{id}.
 func (a *API) handleRemove(w http.ResponseWriter, r *http.Request) {
-	id, ok := parseID(chi.URLParam(r, "id"))
+	id, ok := parseID(r.PathValue("id"))
 	if !ok {
 		writeError(w, http.StatusNotFound, "not found")
 		return
@@ -183,6 +180,3 @@ func (a *API) handleRemove(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
-
-// ensure strings is used (keeps imports tidy if future handlers trim input).
-var _ = strings.TrimSpace
