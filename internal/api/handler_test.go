@@ -7,26 +7,24 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
-
 	"migrated-app/internal/notes"
 )
 
-func newTestRouter(t *testing.T) (chi.Router, *notes.Store) {
+func newTestRouter(t *testing.T) (*http.ServeMux, *notes.Store) {
 	t.Helper()
 	store := notes.NewStore()
-	r := chi.NewRouter()
 	a := New(store)
-	r.Get("/health", a.handleHealth)
-	r.Get("/notes", a.handleList)
-	r.Post("/notes", a.handleCreate)
-	r.Get("/notes/{id}", a.handleGet)
-	r.Put("/notes/{id}", a.handleUpdate)
-	r.Delete("/notes/{id}", a.handleRemove)
-	return r, store
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /health", a.handleHealth)
+	mux.HandleFunc("GET /notes", a.handleList)
+	mux.HandleFunc("POST /notes", a.handleCreate)
+	mux.HandleFunc("GET /notes/{id}", a.handleGet)
+	mux.HandleFunc("PUT /notes/{id}", a.handleUpdate)
+	mux.HandleFunc("DELETE /notes/{id}", a.handleRemove)
+	return mux, store
 }
 
-func doRequest(t *testing.T, r chi.Router, method, path, body string) (*httptest.ResponseRecorder, map[string]any) {
+func doRequest(t *testing.T, r *http.ServeMux, method, path, body string) (*httptest.ResponseRecorder, map[string]any) {
 	t.Helper()
 	var req *http.Request
 	if body == "" {
