@@ -1,11 +1,26 @@
 package main
 
-import "net/http"
+import (
+	"net/http"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
+	"migrated-app/internal/api"
+)
+
+// buildRouter constructs the chi router, applies middleware, keeps the
+// health check, and mounts every route-owning package's RegisterRoutes.
 func buildRouter() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	})
-	return mux
+
+	api.RegisterRoutes(r)
+
+	return r
 }
