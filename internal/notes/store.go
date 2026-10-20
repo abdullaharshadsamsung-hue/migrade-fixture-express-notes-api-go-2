@@ -29,11 +29,9 @@ type Store struct {
 
 // NewStore returns an empty, ready-to-use Store.
 func NewStore() *Store {
-	// Seed the initial note the source Express app served at startup
-	// (GET /notes/1 must return the pre-existing first note).
-	s := &Store{notes: make(map[int64]Note), nextID: 2}
-	s.notes[1] = Note{ID: 1, Title: "First note", Body: "This is the first note."}
-	return s
+	// The source Express app starts with an empty notes list; ids are
+	// auto-incremented from 1 by POST /notes.
+	return &Store{notes: make(map[int64]Note), nextID: 1}
 }
 
 // List returns a snapshot of all notes, in unspecified order.
